@@ -23,7 +23,7 @@ export default function LoginPage() {
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center gap-2 mb-3">
             <Zap className="w-6 h-6 text-primary" />
-            <span className="text-2xl font-bold tracking-tight">Outbound AI</span>
+            <span className="text-2xl font-bold tracking-tight">Cadence</span>
           </div>
           <p className="text-sm text-muted-foreground">Your AI phone agent.</p>
         </div>

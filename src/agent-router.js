@@ -26,6 +26,7 @@ Agent types and when to use them:
     dispute_denial (disputing a denied claim or unexpected charge),
     get_quote (requesting a rate quote),
     check_status (checking status of an existing claim).
+- healthcare_appointment: outbound call to a patient confirming, rescheduling, or following up on a medical appointment. Involves collecting appointment_status, barriers, patient questions, and follow_up_needed. Mode: null.
 - generic: anything that doesn't clearly fit the above categories.
 
 Return valid JSON only, no explanation, no markdown:
@@ -40,7 +41,7 @@ Return valid JSON only, no explanation, no markdown:
     const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
     const result = JSON.parse(cleaned);
 
-    const validTypes = ['food_ordering', 'appointment_booking', 'general_customer_service', 'insurance_calls', 'generic'];
+    const validTypes = ['food_ordering', 'appointment_booking', 'general_customer_service', 'insurance_calls', 'healthcare_appointment', 'generic'];
     const agentType = validTypes.includes(result.agent_type) ? result.agent_type : 'generic';
 
     const validModes = ['file_claim', 'dispute_denial', 'get_quote', 'check_status', null];

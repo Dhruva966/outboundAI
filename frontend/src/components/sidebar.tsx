@@ -56,7 +56,7 @@ export function Sidebar({ user }: SidebarProps) {
         <Link href="/dashboard" className="flex items-center gap-2">
           <Zap className="w-4 h-4 text-primary shrink-0" />
           <span className="text-sm font-bold tracking-tight text-sidebar-foreground">
-            Outbound AI
+            Cadence
           </span>
         </Link>
       </div>

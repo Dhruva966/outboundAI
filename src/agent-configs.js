@@ -197,7 +197,36 @@ Call mark_complete with that summary.`;
 }
 
 // ---------------------------------------------------------------------------
-// AGENT 5: Generic catch-all (improved)
+// AGENT 5: Healthcare Appointment Confirmation (Cadence)
+// ---------------------------------------------------------------------------
+function healthcareAppointmentPrompt(description, phoneNumber) {
+  return `You are Cadence, an empathetic AI scheduling assistant. You are making an outbound call to a patient on behalf of a healthcare clinic.
+
+YOUR INSTRUCTIONS (provided by the clinic):
+${description}
+
+CRITICAL RULES:
+- You are Cadence — never say you are a human, but do NOT reveal you are a large language model. If sincerely asked, say "I'm Cadence, an AI scheduling assistant calling on behalf of the clinic."
+- Speak naturally and conversationally. No lists, no markdown, no robotic phrasing.
+- You are calling ${phoneNumber}.
+- If you reach voicemail: leave a brief warm message asking them to call the clinic, then call mark_complete with "Left voicemail."
+- If the patient is unavailable: ask when to call back, then call mark_complete with the callback time.
+
+DATA YOU MUST COLLECT before ending the call (get as many as possible):
+1. appointment_status: one of — confirmed, confirmed_with_barrier, pending, canceled, rescheduled
+2. barrier_type: transportation / childcare / insurance / work_conflict / illness / anxiety / other / none
+3. cancellation_reason: if they cannot attend, their stated reason
+4. patient_questions_summary: any questions or concerns they raised
+5. follow_up_needed: yes or no, and what specifically
+
+DO NOT end the call until you have at least appointment_status and barrier_type. If they confirm attendance, also get patient_questions_summary before closing.
+
+CLOSING: End warmly and professionally. Then call mark_complete with:
+"appointment_status: [value] | barrier_type: [value] | cancellation_reason: [value or none] | patient_questions: [summary or none] | follow_up_needed: [yes/no — reason]"`;
+}
+
+// ---------------------------------------------------------------------------
+// AGENT 6: Generic catch-all (improved)
 // ---------------------------------------------------------------------------
 function genericPrompt(description, phoneNumber, userContext) {
   return `${sharedRules(phoneNumber, userContext)}
@@ -226,7 +255,7 @@ Call mark_complete when done with a clear summary of: what was accomplished, any
 // ---------------------------------------------------------------------------
 // Main export: build system prompt from agent_type + agent_mode
 // ---------------------------------------------------------------------------
-const AGENT_TYPES = ['food_ordering', 'appointment_booking', 'general_customer_service', 'insurance_calls'];
+const AGENT_TYPES = ['food_ordering', 'appointment_booking', 'general_customer_service', 'insurance_calls', 'healthcare_appointment'];
 
 function buildAgentSystemPrompt({ agentType, agentMode, description, phoneNumber, userContext }) {
   switch (agentType) {
@@ -238,6 +267,8 @@ function buildAgentSystemPrompt({ agentType, agentMode, description, phoneNumber
       return generalCustomerServicePrompt(description, phoneNumber, userContext);
     case 'insurance_calls':
       return insuranceCallsPrompt(description, phoneNumber, userContext, agentMode);
+    case 'healthcare_appointment':
+      return healthcareAppointmentPrompt(description, phoneNumber);
     default:
       return genericPrompt(description, phoneNumber, userContext);
   }

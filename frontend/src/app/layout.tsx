@@ -9,7 +9,7 @@ const bricolage = Bricolage_Grotesque({ variable: '--font-bricolage', subsets: [
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Outbound AI',
+  title: 'Cadence',
   description: 'Your AI phone agent.',
 }
 

@@ -101,7 +101,7 @@ export default function DashboardPage() {
       <div className="w-full max-w-2xl space-y-1 mb-8 text-center">
         <div className="flex items-center justify-center gap-2">
           <Zap className="w-5 h-5 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Outbound AI</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Cadence</h1>
         </div>
         {totalCalls > 0 && (
           <p className="text-sm text-muted-foreground">
