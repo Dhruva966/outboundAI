@@ -42,6 +42,7 @@ class OutboundAgent {
     this._disconnecting = false;
     this._chunkCount    = 0;
     this._pendingToolCallId = null;
+    this._agentSpeaking = false; // echo suppression: drop input audio while agent is playing
   }
 
   connect() {
@@ -122,9 +123,9 @@ class OutboundAgent {
         input_audio_transcription: { model: 'whisper-1', language: 'en' },
         turn_detection: {
           type: 'server_vad',
-          threshold: 0.7,
+          threshold: 0.85,
           prefix_padding_ms: 300,
-          silence_duration_ms: 700,
+          silence_duration_ms: 1000,
         },
         tools: [
           {
@@ -163,19 +164,33 @@ class OutboundAgent {
         this.ready = true;
         logger.info({ taskId: this.taskId }, 'openai session configured — triggering opening');
         if (this.ws?.readyState === WebSocket.OPEN) {
-          this.ws.send(JSON.stringify({ type: 'response.create' }));
+          // Override instructions for this one response to force the verbatim OPENING line.
+          // Without this, GPT-4o reads the whole playbook and generates deal content instead.
+          this.ws.send(JSON.stringify({
+            type: 'response.create',
+            response: {
+              instructions: 'Say your OPENING line exactly as written in your instructions — one sentence only. Do not add anything before or after it. Then stop and wait.',
+            },
+          }));
         }
         break;
 
       case 'response.audio.delta':
         // base64 g711_ulaw — send directly to Twilio (zero transcoding)
+        this._agentSpeaking = true;
         if (msg.delta) {
           this.onAudioOut?.(msg.delta);
         }
         break;
 
       case 'response.audio.done':
-        logger.debug({ taskId: this.taskId }, 'openai audio response done');
+        // Agent finished speaking. Clear echo from input buffer — phone line echoes agent
+        // audio back through Twilio; VAD would detect it as user speech and interrupt.
+        this._agentSpeaking = false;
+        if (this.ws?.readyState === WebSocket.OPEN) {
+          this.ws.send(JSON.stringify({ type: 'input_audio_buffer.clear' }));
+        }
+        logger.debug({ taskId: this.taskId }, 'openai audio response done — echo buffer cleared');
         break;
 
       case 'response.audio_transcript.done':
@@ -261,6 +276,9 @@ class OutboundAgent {
    */
   sendUlawChunk(base64Payload) {
     if (!this.ready || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    // Drop input audio while agent is speaking — phone line echoes agent audio back
+    // through Twilio, VAD would detect it as user speech and interrupt mid-sentence.
+    if (this._agentSpeaking) return;
     this._chunkCount++;
     if (this._chunkCount % 50 === 0) {
       logger.info({ taskId: this.taskId, chunks: this._chunkCount }, 'audio chunks sent to openai');

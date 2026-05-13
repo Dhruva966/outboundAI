@@ -31,7 +31,7 @@ export function LiveTaskPolling({
       const { data } = await supabase
         .from('transcripts').select('*').eq('task_id', taskId).order('ts', { ascending: true })
       if (data) setTranscripts(data)
-    }, 3000)
+    }, 1000)
 
     return () => clearInterval(interval)
   }, [isLive, taskId])
