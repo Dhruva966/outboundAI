@@ -635,7 +635,7 @@ app.ws('/stream', (ws, _req) => {
             }
           },
 
-          onAgentText: (text) => db.addTranscript(taskId, 'assistant', text),
+          onAgentText: (text, partial) => { if (!partial) db.addTranscript(taskId, 'assistant', text); },
           onUserText: (text) => db.addTranscript(taskId, 'user', text),
 
           onToolCall: async (toolName, args) => {

@@ -42,7 +42,8 @@ class OutboundAgent {
     this._disconnecting = false;
     this._chunkCount    = 0;
     this._pendingToolCallId = null;
-    this._agentSpeaking = false; // echo suppression: drop input audio while agent is playing
+    this._agentSpeaking  = false; // echo suppression: drop input audio while agent is playing
+    this._partialAgentText = '';  // accumulate streaming transcript delta
   }
 
   connect() {
@@ -95,9 +96,11 @@ class OutboundAgent {
   }
 
   _buildSystemPrompt() {
+    const LANGUAGE_RULE = '\n\nLANGUAGE RULE: Respond in English only. Switch to Hindi only if the playbook explicitly instructs it or the supplier speaks exclusively in Hindi and cannot understand English. Never use any other language.';
+
     // sourcing_negotiation: userContext IS the pre-compiled playbook from planner.js
     if (this.agentType === 'sourcing_negotiation' && this.userContext) {
-      return this.userContext;
+      return this.userContext + LANGUAGE_RULE;
     }
     // All other agent types: use agent-configs.js
     return buildAgentSystemPrompt({
@@ -106,7 +109,7 @@ class OutboundAgent {
       description: this.description,
       phoneNumber: this.phoneNumber,
       userContext: this.userContext,
-    });
+    }) + LANGUAGE_RULE;
   }
 
   _initSession() {
@@ -164,14 +167,19 @@ class OutboundAgent {
         this.ready = true;
         logger.info({ taskId: this.taskId }, 'openai session configured — triggering opening');
         if (this.ws?.readyState === WebSocket.OPEN) {
-          // Override instructions for this one response to force the verbatim OPENING line.
-          // Without this, GPT-4o reads the whole playbook and generates deal content instead.
+          // Inject a user turn to prompt the OPENING line. Do NOT use response.create
+          // with instructions override — that replaces the entire session playbook for
+          // that response, causing GPT-4o to speak with no context (produces Spanish or
+          // generic content). User message keeps full playbook in effect.
           this.ws.send(JSON.stringify({
-            type: 'response.create',
-            response: {
-              instructions: 'Say your OPENING line exactly as written in your instructions — one sentence only. Do not add anything before or after it. Then stop and wait.',
+            type: 'conversation.item.create',
+            item: {
+              type: 'message',
+              role: 'user',
+              content: [{ type: 'input_text', text: '[Call connected. Say your OPENING line now — one sentence, then stop.]' }],
             },
           }));
+          this.ws.send(JSON.stringify({ type: 'response.create' }));
         }
         break;
 
@@ -193,10 +201,22 @@ class OutboundAgent {
         logger.debug({ taskId: this.taskId }, 'openai audio response done — echo buffer cleared');
         break;
 
+      case 'response.audio_transcript.delta':
+        if (msg.delta) {
+          this._partialAgentText += msg.delta;
+          this.onAgentText?.(msg.delta, true); // true = partial/streaming chunk
+        }
+        break;
+
       case 'response.audio_transcript.done':
-        if (msg.transcript) {
-          logger.info({ taskId: this.taskId, text: msg.transcript }, 'agent said');
-          this.onAgentText?.(msg.transcript);
+        // Final transcript — emit the complete text and reset accumulator
+        {
+          const finalText = msg.transcript || this._partialAgentText;
+          if (finalText) {
+            logger.info({ taskId: this.taskId, text: finalText }, 'agent said');
+            this.onAgentText?.(finalText, false); // false = final
+          }
+          this._partialAgentText = '';
         }
         break;
 
