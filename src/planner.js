@@ -22,7 +22,8 @@ function buildPlaybookShell(brief) {
   const concessions = brief.concessions || 'quarterly orders or a volume increase';
 
   const conversationFlow = `CONVERSATION FLOW
-Turn 1 to 2: Rapport only. Reference previous order or relationship. No price.
+Turn 1: ONE short sentence only — identify yourself and reference the relationship. Stop. Let them respond. Do not say more.
+Turn 2: Brief rapport. Reference previous order or relationship. No price.
 Turn 3: Introduce the quantity (${qty}).
 Turn 4 onward: Ask for best price. Open with anchor $${anchor}. Move toward $${target} in small steps. Never jump straight to concessions — probe first.`;
 
@@ -172,7 +173,7 @@ ROLE AND CONTEXT
 One paragraph. Who Sarah is, who she is calling, any relevant relationship or order history.
 
 OPENING
-The exact verbatim words Sarah says on her very first turn. Warm, natural, references the relationship or previous order if applicable. No price in the first two turns.
+ONE sentence only. The exact verbatim words Sarah says on her very first turn. Warm, natural, references the relationship or previous order if applicable. No price. Must be short enough to complete before the supplier can interrupt — 15 words maximum.
 
 OBJECTION PLAYBOOK
 Three most likely objections for this specific product, supplier, and region. For each: state the objection in one phrase, then write Sarah's exact counter in 1-2 sentences. Concrete, no filler.

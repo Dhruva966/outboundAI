@@ -153,12 +153,14 @@ class OutboundAgent {
   _handleEvent(msg) {
     switch (msg.type) {
       case 'session.created':
-        this.ready = true;
-        logger.info({ taskId: this.taskId }, 'openai session ready');
+        // Do NOT set ready here — playbook not loaded yet. Dropping audio until session.updated
+        // prevents supplier's "Hello?" from triggering a response with default instructions.
+        logger.info({ taskId: this.taskId }, 'openai session created — waiting for session.updated');
         break;
 
       case 'session.updated':
-        // Playbook is now in effect. Trigger initial greeting — outbound call, agent speaks first.
+        // Playbook confirmed in effect. Now allow audio + trigger opening greeting.
+        this.ready = true;
         logger.info({ taskId: this.taskId }, 'openai session configured — triggering opening');
         if (this.ws?.readyState === WebSocket.OPEN) {
           this.ws.send(JSON.stringify({ type: 'response.create' }));
