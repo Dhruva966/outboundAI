@@ -235,7 +235,8 @@ class OutboundAgent {
         if (msg.transcript) {
           const t = msg.transcript.trim();
           // Whisper hallucinates on silence/echo — filter known filler phrases
-          const WHISPER_HALLUCINATION = /^(thank you\.?|thanks\.?|thank you for watching\.?|thank you[,.]?\s+\w+\.?|bye[\.!]?|goodbye[\.!]?|you\.|see you\.?|sure\.|right\.|hmm+\.?)$/i;
+          // Whisper hallucinates single-word/short filler from silence, even in quiet rooms
+          const WHISPER_HALLUCINATION = /^(thank you\.?|thanks\.?|thank you for watching\.?|thank you[,.]?\s+\w+\.?|bye[\.!?]?|goodbye[\.!]?|you\.|see you\.?|sure\.|right\.|hmm+[\.!]?|yeah[\.!?]?|yep[\.!]?|mm[-\s]?hmm[\.!]?|uh[-\s]?huh[\.!]?|mhm+[\.!]?|okay\.|ok\.|alright\.)$/i;
           if (t.length < 40 && WHISPER_HALLUCINATION.test(t)) {
             logger.warn({ taskId: this.taskId, text: t }, 'whisper hallucination filtered — not forwarding to agent');
             break;
