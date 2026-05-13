@@ -174,7 +174,7 @@ Output plain text only. No markdown. No dashes. No numbered lists. Section heade
   try {
     const msg = await anthropic.messages.create({
       model: 'claude-opus-4-7',
-      max_tokens: 3000,
+      max_tokens: 4000,
       messages: [{ role: 'user', content: prompt }],
     });
     const playbook = msg.content.find(b => b.type === 'text')?.text?.trim() || '';
