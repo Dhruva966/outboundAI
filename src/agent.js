@@ -121,7 +121,7 @@ class OutboundAgent {
       session: {
         modalities: ['audio', 'text'],
         instructions,
-        voice: 'alloy',
+        voice: 'shimmer',
         input_audio_format: 'g711_ulaw',
         output_audio_format: 'g711_ulaw',
         input_audio_transcription: { model: 'whisper-1', language: 'en' },
@@ -129,7 +129,7 @@ class OutboundAgent {
           type: 'server_vad',
           threshold: 0.85,
           prefix_padding_ms: 300,
-          silence_duration_ms: 1000,
+          silence_duration_ms: 600,
         },
         tools: [
           {
@@ -164,14 +164,15 @@ class OutboundAgent {
         break;
 
       case 'session.updated':
-        // Playbook confirmed in effect. Now allow audio + trigger opening greeting.
+        // Playbook confirmed in effect. Suppress all input immediately — there is a
+        // ~200ms gap between now and the first response.audio.delta where _agentSpeaking
+        // is still false. Any Twilio audio in that window reaches OpenAI and queues a
+        // second response before Turn 1 even starts, causing back-to-back self-replies.
         this.ready = true;
-        logger.info({ taskId: this.taskId }, 'openai session configured — triggering opening');
+        this._agentSpeaking = true;
+        logger.info({ taskId: this.taskId }, 'openai session configured — input suppressed, triggering opening');
         if (this.ws?.readyState === WebSocket.OPEN) {
-          // Inject a user turn to prompt the OPENING line. Do NOT use response.create
-          // with instructions override — that replaces the entire session playbook for
-          // that response, causing GPT-4o to speak with no context (produces Spanish or
-          // generic content). User message keeps full playbook in effect.
+          this.ws.send(JSON.stringify({ type: 'input_audio_buffer.clear' }));
           this.ws.send(JSON.stringify({
             type: 'conversation.item.create',
             item: {
