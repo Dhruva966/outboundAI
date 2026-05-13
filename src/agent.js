@@ -158,7 +158,11 @@ class OutboundAgent {
         break;
 
       case 'session.updated':
-        logger.debug({ taskId: this.taskId }, 'openai session updated');
+        // Playbook is now in effect. Trigger initial greeting — outbound call, agent speaks first.
+        logger.info({ taskId: this.taskId }, 'openai session configured — triggering opening');
+        if (this.ws?.readyState === WebSocket.OPEN) {
+          this.ws.send(JSON.stringify({ type: 'response.create' }));
+        }
         break;
 
       case 'response.audio.delta':
