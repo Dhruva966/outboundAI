@@ -9,8 +9,8 @@ const bricolage = Bricolage_Grotesque({ variable: '--font-bricolage', subsets: [
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Cadence',
-  description: 'Your AI phone agent.',
+  title: 'Charlie',
+  description: 'Your AI sourcing agent.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

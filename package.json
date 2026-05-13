@@ -1,7 +1,7 @@
 {
-  "name": "outbound-ai",
+  "name": "charlie",
   "version": "0.1.0",
-  "description": "AI agent that makes outbound phone calls on your behalf",
+  "description": "AI sourcing agent for negotiating with overseas manufacturers",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -10,6 +10,7 @@
     "cli": "node src/cli.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.95.2",
     "@deepgram/sdk": "^3.9.0",
     "@supabase/supabase-js": "^2.105.0",
     "axios": "^1.7.0",

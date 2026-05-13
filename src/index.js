@@ -1,8 +1,11 @@
 require('dotenv').config();
 
 const REQUIRED_ENV = [
-  'DEEPGRAM_API_KEY',
+  'OPENAI_API_KEY',
   'GEMINI_API_KEY',
+  'ANTHROPIC_API_KEY',
+  // 'ELEVENLABS_API_KEY',  // replaced by OpenAI Realtime
+  // 'ELEVENLABS_AGENT_ID',
   'TWILIO_ACCOUNT_SID',
   'TWILIO_AUTH_TOKEN',
   'TWILIO_PHONE_NUMBER',

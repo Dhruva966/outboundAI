@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Phone, ArrowLeft } from 'lucide-react'
 import { TranscriptAccordion } from '@/components/transcript-accordion'
 import { PostCallFeedback } from '@/components/post-call-feedback'
+import { NegotiationPanel } from '@/components/negotiation-panel'
 import { statusConfig } from '@/lib/status'
 
 export default async function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -78,6 +79,14 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
           )}
         </CardContent>
       </Card>
+
+      {/* Sourcing negotiation command center */}
+      {task.agent_type === 'sourcing_negotiation' && (
+        <NegotiationPanel
+          transcripts={transcripts || []}
+          userContext={task.user_context ?? null}
+        />
+      )}
 
       {/* Transcript accordion */}
       <TranscriptAccordion

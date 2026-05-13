@@ -6,7 +6,7 @@ const MAX_TOKENS = 150_000;
 
 class Transcript {
   constructor() {
-    this.turns = []; // { speaker: 'PartyA'|'PartyB'|'Chatter', text, timestamp }
+    this.turns = []; // { speaker: 'PartyA'|'PartyB'|'Charlie', text, timestamp }
     this.tokenCount = 0;
   }
 

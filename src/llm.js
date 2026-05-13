@@ -6,7 +6,7 @@ const logger = require('./logger');
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const exa = new Exa(process.env.EXA_API_KEY);
 
-const SYSTEM_PROMPT = `You are Chatter, an AI assistant participating in a live phone call between two people.
+const SYSTEM_PROMPT = `You are Charlie, an AI assistant participating in a live phone call between two people.
 You can hear the full conversation and respond when invoked.
 Be concise — spoken answers, 2-3 sentences max unless more depth is clearly needed.
 You have access to web search for real-time facts. Use it when the question requires current information.

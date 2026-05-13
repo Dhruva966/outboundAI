@@ -164,6 +164,36 @@ async function deleteAgent(id, userId) {
   if (error) throw error;
 }
 
+// ---------------------------------------------------------------------------
+// Call Briefs
+// ---------------------------------------------------------------------------
+
+async function createBrief(fields, userId) {
+  const id = genId();
+  const { data, error } = await supabase
+    .from('call_briefs')
+    .insert({ id, user_id: userId, ...fields })
+    .select().single();
+  if (error) throw error;
+  return data;
+}
+
+async function getBrief(id) {
+  const { data, error } = await supabase
+    .from('call_briefs').select('*').eq('id', id).single();
+  if (error || !data) throw new Error('Brief not found');
+  return data;
+}
+
+async function listBriefs(userId) {
+  const { data, error } = await supabase
+    .from('call_briefs').select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
 module.exports = {
   createTask,
   updateCallSid,
@@ -182,4 +212,7 @@ module.exports = {
   listAgents,
   updateAgent,
   deleteAgent,
+  createBrief,
+  getBrief,
+  listBriefs,
 };

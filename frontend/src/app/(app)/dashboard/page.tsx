@@ -11,9 +11,9 @@ import { statusConfig } from '@/lib/status'
 import { toast } from 'sonner'
 
 const GOOEY_PROMPTS = [
-  'Make a restaurant reservation for tonight',
-  "Schedule a doctor's appointment",
-  'Dispute my cable bill',
+  'Negotiate 1,000 polo shirts with Ravi Textiles in Tirupur',
+  'Get pricing for custom packaging from a Guangzhou supplier',
+  'Source 500 units of custom water bottles from India',
 ]
 
 type Task = {
@@ -43,7 +43,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setLocationHint(localStorage.getItem('chatter_location_hint'))
+      setLocationHint(localStorage.getItem('charlie_location_hint'))
     }
   }, [])
 
@@ -62,7 +62,7 @@ export default function DashboardPage() {
   const handleLocationDetected = useCallback((hint: string) => {
     setLocationHint(hint)
     if (typeof window !== 'undefined') {
-      localStorage.setItem('chatter_location_hint', hint)
+      localStorage.setItem('charlie_location_hint', hint)
     }
   }, [])
 
@@ -101,7 +101,7 @@ export default function DashboardPage() {
       <div className="w-full max-w-2xl space-y-1 mb-8 text-center">
         <div className="flex items-center justify-center gap-2">
           <Zap className="w-5 h-5 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Cadence</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Charlie</h1>
         </div>
         {totalCalls > 0 && (
           <p className="text-sm text-muted-foreground">

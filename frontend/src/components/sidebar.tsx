@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   Bot, BookOpen, Phone, Layers, History, MessageSquare,
   BarChart2, ShieldCheck, Bell, Settings, Zap, PhoneCall,
+  PlusCircle, FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SignOutButton } from '@/components/sign-out-button'
@@ -32,6 +33,13 @@ const NAV: NavSection[] = [
     ],
   },
   {
+    title: 'SOURCING',
+    items: [
+      { label: 'New Brief', href: '/sourcing/new',    icon: PlusCircle },
+      { label: 'Briefs',    href: '/sourcing/briefs', icon: FileText },
+    ],
+  },
+  {
     title: 'MONITOR',
     items: [
       { label: 'Call History',         href: '/call-history', icon: History },
@@ -56,7 +64,7 @@ export function Sidebar({ user }: SidebarProps) {
         <Link href="/dashboard" className="flex items-center gap-2">
           <Zap className="w-4 h-4 text-primary shrink-0" />
           <span className="text-sm font-bold tracking-tight text-sidebar-foreground">
-            Cadence
+            Charlie
           </span>
         </Link>
       </div>

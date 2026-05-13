@@ -14,8 +14,9 @@ import {
     Mic,
     MicOff,
     MapPin,
-    UtensilsCrossed,
-    Scissors,
+    Package,
+    Globe,
+    Handshake,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as React from "react";
@@ -177,25 +178,24 @@ export function AnimatedAIChat({
 
     const showGooey = !!(animatedPlaceholderTexts?.length && !value && !inputFocused);
 
-    // Chatter AI-specific suggestions mapped to the app's use cases
     const commandSuggestions: CommandSuggestion[] = [
         {
-            icon: <UtensilsCrossed className="w-4 h-4" />,
-            label: "Order Food",
-            description: "Call a restaurant and place an order",
-            prefix: "Call Chipotle on Market St and order a burrito bowl with chicken, black beans, and guac for pickup in 30 min",
+            icon: <Package className="w-4 h-4" />,
+            label: "Source Product",
+            description: "Negotiate pricing with an overseas manufacturer",
+            prefix: "Negotiate 1,000 units of custom polo shirts with Ravi Textiles — target $4.20/unit",
         },
         {
-            icon: <Scissors className="w-4 h-4" />,
-            label: "Book Appointment",
-            description: "Schedule a haircut or service",
-            prefix: "Book me a haircut at the nearest Great Clips for tomorrow afternoon",
+            icon: <Globe className="w-4 h-4" />,
+            label: "Get Quotes",
+            description: "Call multiple suppliers for competitive quotes",
+            prefix: "Get quotes for 500 custom water bottles from Indian manufacturers",
         },
         {
-            icon: <Phone className="w-4 h-4" />,
-            label: "Customer Service",
-            description: "Handle support calls on your behalf",
-            prefix: "Call Comcast support and ask about cancelling my subscription — I want to negotiate a better rate",
+            icon: <Handshake className="w-4 h-4" />,
+            label: "Follow Up",
+            description: "Follow up on a previous negotiation",
+            prefix: "Follow up with Ramesh at Ravi Textiles on the polo shirt order from last week",
         },
     ];
 

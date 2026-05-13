@@ -71,6 +71,18 @@ function upsample8to48(buf) {
   return out;
 }
 
+// Upsample linear16 8kHz → 16kHz by repeating each sample 2×
+function upsample8to16(buf) {
+  const numSamples = Math.floor(buf.length / 2);
+  const out = Buffer.allocUnsafe(numSamples * 4);
+  for (let i = 0; i < numSamples; i++) {
+    const sample = buf.readInt16LE(i * 2);
+    out.writeInt16LE(sample, i * 4);
+    out.writeInt16LE(sample, i * 4 + 2);
+  }
+  return out;
+}
+
 // Downsample linear16 24kHz → 8kHz by taking every 3rd sample
 function downsample24to8(buf) {
   const numSamples = Math.floor(buf.length / 2);
@@ -82,4 +94,4 @@ function downsample24to8(buf) {
   return out;
 }
 
-module.exports = { mulawDecode, mulawEncode, upsample8to48, downsample24to8 };
+module.exports = { mulawDecode, mulawEncode, upsample8to48, upsample8to16, downsample24to8 };

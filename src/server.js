@@ -5,6 +5,7 @@ const expressWs = require('express-ws');
 const cors = require('cors');
 const path = require('path');
 const axios = require('axios');
+const Anthropic = require('@anthropic-ai/sdk');
 const db = require('./db');
 const audio = require('./audio');
 const OutboundAgent = require('./agent');
@@ -14,6 +15,30 @@ const { findBusiness } = require('./search');
 const logger = require('./logger');
 const { requireAuth } = require('./middleware/auth');
 const twilio = require('twilio');
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const { generateCallPlaybook } = require('./planner');
+const { createBrief, getBrief, listBriefs } = require('./db');
+
+async function getNegotiationGuidance(situation, plannerContext) {
+  const contextBlock = plannerContext
+    ? `DEAL CONTEXT:\n${JSON.stringify(plannerContext, null, 2)}\n\n`
+    : '';
+  try {
+    const msg = await anthropic.messages.create({
+      model: 'claude-opus-4-7',
+      max_tokens: 300,
+      system: `You are a sourcing negotiation supervisor. A voice agent is in a live call with a supplier.
+${contextBlock}Give a brief, specific tactical instruction (2-3 sentences max) for what the agent should do next.
+Be concrete. Never reveal the ceiling price. Format: plain text only, no markdown.`,
+      messages: [{ role: 'user', content: `Current situation: ${situation}` }],
+    });
+    return msg.content.find(b => b.type === 'text')?.text || 'Proceed cautiously. Maintain collaborative tone.';
+  } catch (err) {
+    logger.error({ err: err.message }, 'getNegotiationGuidance failed');
+    return 'Proceed cautiously. Maintain collaborative tone.';
+  }
+}
 
 // Validates that incoming POST is genuinely from Twilio.
 // Skipped in development (no BASE_URL set) to allow ngrok testing.
@@ -320,6 +345,149 @@ app.delete('/agents/:id', requireAuth, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Sourcing briefs
+// ---------------------------------------------------------------------------
+
+app.post('/api/parse-brief', requireAuth, async (req, res) => {
+  const text = req.body?.text;
+  if (!text || text.length < 10) {
+    return res.status(400).json({ error: 'text required (min 10 chars)' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const sendEvent = (event, data) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    let fullText = '';
+    const stream = await anthropic.messages.stream({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 600,
+      system: `Extract a sourcing negotiation brief from the user's text. Return ONLY valid JSON with these exact fields:
+{
+  "product": "<product description including quantity and specs>",
+  "target_price": <number — target price per unit>,
+  "ceiling_price": <number — max budget / walk-away price per unit>,
+  "supplier": "<supplier name and contact person if mentioned>",
+  "region": "<india|china|vietnam|other>"
+}
+If a field is not mentioned, use null for numbers or "unknown" for strings. Do not explain. JSON only.`,
+      messages: [{ role: 'user', content: text }],
+    });
+
+    stream.on('text', (chunk) => {
+      fullText += chunk;
+      sendEvent('delta', { chunk });
+    });
+
+    await stream.finalMessage();
+
+    const cleaned = fullText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    let brief;
+    try {
+      brief = JSON.parse(cleaned);
+    } catch {
+      sendEvent('error', { message: 'Failed to parse brief JSON from model output' });
+      return res.end();
+    }
+
+    sendEvent('brief', brief);
+    res.end();
+  } catch (err) {
+    logger.error({ err: err.message }, 'parse-brief SSE failed');
+    sendEvent('error', { message: err.message });
+    res.end();
+  }
+});
+
+app.get('/api/briefs', requireAuth, async (req, res) => {
+  try {
+    res.json(await listBriefs(req.user.id));
+  } catch (err) {
+    logger.error({ err: err.message }, 'listBriefs failed');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/briefs', requireAuth, async (req, res) => {
+  if (!req.body?.product) return res.status(400).json({ error: 'product required' });
+  try {
+    res.json(await createBrief(req.body, req.user.id));
+  } catch (err) {
+    logger.error({ err: err.message }, 'createBrief failed');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/briefs/:id', requireAuth, async (req, res) => {
+  try {
+    const brief = await getBrief(req.params.id);
+    if (brief.user_id !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
+    res.json(brief);
+  } catch (err) {
+    res.status(404).json({ error: 'Brief not found' });
+  }
+});
+
+app.post('/api/briefs/:id/call', requireAuth, async (req, res) => {
+  const phoneNumber = req.body?.phone_number;
+  if (!phoneNumber) return res.status(400).json({ error: 'phone_number required' });
+
+  let brief;
+  try {
+    brief = await getBrief(req.params.id);
+    if (brief.user_id !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
+  } catch {
+    return res.status(404).json({ error: 'Brief not found' });
+  }
+
+  const webhookBase = process.env.TWILIO_WEBHOOK_BASE || process.env.BASE_URL;
+
+  let playbook;
+  try {
+    playbook = await generateCallPlaybook(brief);
+  } catch (err) {
+    logger.error({ err: err.message }, 'generateCallPlaybook failed');
+    return res.status(500).json({ error: 'Failed to generate call strategy' });
+  }
+
+  const description = `Negotiate ${brief.product} with ${brief.supplier || 'supplier'}`;
+
+  let task;
+  try {
+    task = await db.createTask({
+      description,
+      phone_number: phoneNumber,
+      agent_type: 'sourcing_negotiation',
+      agent_mode: null,
+      user_context: playbook,
+      business_name: brief.supplier || null,
+      location_hint: brief.region || null,
+    }, req.user.id);
+  } catch (err) {
+    logger.error({ err: err.message }, 'createTask for brief call failed');
+    return res.status(500).json({ error: 'Failed to create task' });
+  }
+
+  await db.updateTaskStatus(task.id, 'calling');
+
+  try {
+    await initiateCall({ taskId: task.id, phoneNumber, webhookBase });
+  } catch (err) {
+    logger.error({ err: err.message, taskId: task.id }, 'initiateCall failed for brief');
+    await db.updateTaskStatus(task.id, 'failed', err.message);
+    return res.status(500).json({ error: 'Failed to initiate call', detail: err.message });
+  }
+
+  res.json({ ...(await db.getTask(task.id)), status: 'calling' });
+});
+
+// ---------------------------------------------------------------------------
 // Twilio webhooks — no auth (Twilio calls these, not users)
 // ---------------------------------------------------------------------------
 
@@ -422,12 +590,9 @@ app.ws('/stream', (ws, _req) => {
           agentMode:   task.agent_mode  || null,
           userContext: task.user_context || null,
 
-          onAudioOut: (pcm24k) => {
-            const pcm8k = audio.downsample24to8(pcm24k);
-            const mulaw = audio.mulawEncode(pcm8k);
-            const payload = mulaw.toString('base64');
+          onAudioOut: (base64Payload) => {
             if (ws.readyState === ws.OPEN) {
-              ws.send(JSON.stringify({ event: 'media', streamSid, media: { payload } }));
+              ws.send(JSON.stringify({ event: 'media', streamSid, media: { payload: base64Payload } }));
             }
           },
 
@@ -465,16 +630,25 @@ app.ws('/stream', (ws, _req) => {
 
           onAgentText: (text) => db.addTranscript(taskId, 'assistant', text),
           onUserText: (text) => db.addTranscript(taskId, 'user', text),
+
+          onToolCall: async (toolName, args) => {
+            if (toolName === 'getNegotiationGuidance') {
+              let plannerContext = null;
+              try {
+                const ctx = task.user_context ? JSON.parse(task.user_context) : {};
+                plannerContext = ctx.plannerContext ?? null;
+              } catch { /* ignore */ }
+              return getNegotiationGuidance(args.situation || '', plannerContext);
+            }
+            return 'Tool not available.';
+          },
         });
 
-        agent.connect();
+        await agent.connect();
       }
 
       if (msg.event === 'media' && agent) {
-        const mulaw = Buffer.from(msg.media.payload, 'base64');
-        const pcm8k = audio.mulawDecode(mulaw);
-        const pcm48k = audio.upsample8to48(pcm8k);
-        agent.sendPcmFrame(pcm48k);
+        agent.sendUlawChunk(msg.media.payload);
       }
 
       if (msg.event === 'stop') {

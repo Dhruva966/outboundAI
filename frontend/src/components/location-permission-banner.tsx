@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { MapPin, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const LS_ASKED = 'chatter_location_asked';
-const LS_COORDS = 'chatter_location_hint';
+const LS_ASKED = 'charlie_location_asked';
+const LS_COORDS = 'charlie_location_hint';
 
 export function LocationPermissionBanner() {
   const [visible, setVisible] = useState(false);
