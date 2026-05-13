@@ -121,10 +121,10 @@ class OutboundAgent {
         output_audio_format: 'g711_ulaw',
         input_audio_transcription: { model: 'whisper-1', language: 'en' },
         turn_detection: {
-          type: 'semantic_vad',
-          eagerness: 'high',
-          interrupt_response: true,
-          create_response: true,
+          type: 'server_vad',
+          threshold: 0.7,
+          prefix_padding_ms: 300,
+          silence_duration_ms: 700,
         },
         tools: [
           {

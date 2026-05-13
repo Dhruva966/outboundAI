@@ -36,7 +36,8 @@ export function LiveTaskPolling({
     return () => clearInterval(interval)
   }, [isLive, taskId])
 
-  const newTranscripts = transcripts.slice(initialTranscripts.length)
+  const initialIds = new Set(initialTranscripts.map(t => t.id))
+  const newTranscripts = transcripts.filter(t => !initialIds.has(t.id))
   if (!newTranscripts.length) return null
 
   return (
