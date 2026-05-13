@@ -22,10 +22,9 @@ function buildPlaybookShell(brief) {
   const concessions = brief.concessions || 'quarterly orders or a volume increase';
 
   const conversationFlow = `CONVERSATION FLOW
-Turn 1: ONE short sentence only — identify yourself and reference the relationship. Stop. Let them respond. Do not say more.
-Turn 2: Brief rapport. Reference previous order or relationship. No price.
-Turn 3: Introduce the quantity (${qty}).
-Turn 4 onward: Ask for best price. Open with anchor $${anchor}. Move toward $${target} in small steps. Never jump straight to concessions — probe first.`;
+Turn 1 — OPENING: 2 to 3 sentences. Say who you are, reference the previous order or relationship, and state the new quantity (${qty}). Deliver all of this before stopping — do NOT pause or stop mid-opening. Example structure: "Hi, this is [name] from [company] — we worked together on [previous order]. This time we're looking at [new quantity]. What's your best price for that?" Complete the opening fully in one turn.
+Turn 2: Respond to their acknowledgment. Transition toward price — ask for their best price on ${qty}.
+Turn 3 onward: Open with anchor $${anchor}. Work toward $${target} in small steps. Never jump straight to concessions — probe first.`;
 
   const culturalSignals = brief.region === 'india'
     ? `CULTURAL SIGNALS

@@ -37,13 +37,14 @@ class OutboundAgent {
     this.onAgentText    = onAgentText;
     this.onUserText     = onUserText;
 
-    this.ws             = null;
-    this.ready          = false;
-    this._disconnecting = false;
-    this._chunkCount    = 0;
+    this.ws                 = null;
+    this.ready              = false;
+    this._disconnecting     = false;
+    this._chunkCount        = 0;
     this._pendingToolCallId = null;
-    this._agentSpeaking  = false; // echo suppression: drop input audio while agent is playing
-    this._partialAgentText = '';  // accumulate streaming transcript delta
+    this._agentSpeaking     = false; // echo suppression: drop input audio while agent is playing
+    this._echoSuppressTimer = null;  // delay before re-enabling input after audio.done
+    this._partialAgentText  = '';    // accumulate streaming transcript delta
   }
 
   connect() {
@@ -146,7 +147,7 @@ class OutboundAgent {
         ],
         tool_choice: 'auto',
         temperature: 0.8,
-        max_response_output_tokens: 100,
+        max_response_output_tokens: 'inf',
       },
     };
 
@@ -176,7 +177,7 @@ class OutboundAgent {
             item: {
               type: 'message',
               role: 'user',
-              content: [{ type: 'input_text', text: '[Call connected. Say your OPENING line now — one sentence, then stop.]' }],
+              content: [{ type: 'input_text', text: '[Call connected. Deliver your complete OPENING now — say all 2-3 sentences from your OPENING and Turn 1 of CONVERSATION FLOW without stopping mid-opening.]' }],
             },
           }));
           this.ws.send(JSON.stringify({ type: 'response.create' }));
@@ -185,6 +186,11 @@ class OutboundAgent {
 
       case 'response.audio.delta':
         // base64 g711_ulaw — send directly to Twilio (zero transcoding)
+        // Cancel any pending echo cooldown — new audio started
+        if (this._echoSuppressTimer) {
+          clearTimeout(this._echoSuppressTimer);
+          this._echoSuppressTimer = null;
+        }
         this._agentSpeaking = true;
         if (msg.delta) {
           this.onAudioOut?.(msg.delta);
@@ -192,13 +198,18 @@ class OutboundAgent {
         break;
 
       case 'response.audio.done':
-        // Agent finished speaking. Clear echo from input buffer — phone line echoes agent
-        // audio back through Twilio; VAD would detect it as user speech and interrupt.
-        this._agentSpeaking = false;
-        if (this.ws?.readyState === WebSocket.OPEN) {
-          this.ws.send(JSON.stringify({ type: 'input_audio_buffer.clear' }));
-        }
-        logger.debug({ taskId: this.taskId }, 'openai audio response done — echo buffer cleared');
+        // OpenAI finished sending audio, but phone still plays it for 300–1500ms.
+        // Echo of that playback returns through Twilio AFTER this event fires.
+        // Hold input suppressed for 1500ms so echo doesn't reach Whisper or trigger VAD.
+        this._echoSuppressTimer = setTimeout(() => {
+          this._echoSuppressTimer = null;
+          this._agentSpeaking = false;
+          if (this.ws?.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({ type: 'input_audio_buffer.clear' }));
+          }
+          logger.debug({ taskId: this.taskId }, 'echo cooldown complete — input re-enabled');
+        }, 1500);
+        logger.debug({ taskId: this.taskId }, 'openai audio response done — echo cooldown 1.5s started');
         break;
 
       case 'response.audio_transcript.delta':
@@ -222,8 +233,15 @@ class OutboundAgent {
 
       case 'conversation.item.input_audio_transcription.completed':
         if (msg.transcript) {
-          logger.info({ taskId: this.taskId, text: msg.transcript }, 'user said');
-          this.onUserText?.(msg.transcript);
+          const t = msg.transcript.trim();
+          // Whisper hallucinates on silence/echo — filter known filler phrases
+          const WHISPER_HALLUCINATION = /^(thank you\.?|thanks\.?|thank you for watching\.?|thank you[,.]?\s+\w+\.?|bye[\.!]?|goodbye[\.!]?|you\.|see you\.?|sure\.|right\.|hmm+\.?)$/i;
+          if (t.length < 40 && WHISPER_HALLUCINATION.test(t)) {
+            logger.warn({ taskId: this.taskId, text: t }, 'whisper hallucination filtered — not forwarding to agent');
+            break;
+          }
+          logger.info({ taskId: this.taskId, text: t }, 'user said');
+          this.onUserText?.(t);
         }
         break;
 
@@ -330,6 +348,10 @@ class OutboundAgent {
   disconnect() {
     this.ready = false;
     this._disconnecting = true;
+    if (this._echoSuppressTimer) {
+      clearTimeout(this._echoSuppressTimer);
+      this._echoSuppressTimer = null;
+    }
     this.ws?.close();
     logger.info({ taskId: this.taskId }, 'openai realtime agent disconnected');
   }
