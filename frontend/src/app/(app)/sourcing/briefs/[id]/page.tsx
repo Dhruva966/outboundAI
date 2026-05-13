@@ -12,10 +12,17 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
 type Brief = {
   id: string
   product: string
+  quantity: number | null
   target_price: number | null
   ceiling_price: number | null
   supplier: string | null
+  contact_name: string | null
   region: string
+  relationship: string | null
+  previous_order: string | null
+  timeline: string | null
+  concessions: string | null
+  additional_notes: string | null
   created_at: string
 }
 
@@ -131,11 +138,24 @@ export default function BriefDetailPage() {
           <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
             Brief Details
           </p>
-          <div className="space-y-3">
-            <Field label="Product" value={brief.product} />
-            <Field label="Target Price" value={brief.target_price != null ? `$${brief.target_price}/unit` : null} />
-            <Field label="Supplier" value={brief.supplier} />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2"><Field label="Product" value={brief.product} /></div>
+            <Field label="Quantity" value={brief.quantity != null ? `${brief.quantity} units` : null} />
             <Field label="Region" value={brief.region} />
+            <Field label="Target Price" value={brief.target_price != null ? `$${brief.target_price}/unit` : null} />
+            <Field label="Relationship" value={brief.relationship} />
+            <Field label="Supplier" value={brief.supplier} />
+            <Field label="Contact" value={brief.contact_name} />
+            <Field label="Timeline" value={brief.timeline} />
+            {brief.previous_order && (
+              <div className="col-span-2"><Field label="Previous Order" value={brief.previous_order} /></div>
+            )}
+            {brief.concessions && (
+              <div className="col-span-2"><Field label="Concessions Available" value={brief.concessions} /></div>
+            )}
+            {brief.additional_notes && (
+              <div className="col-span-2"><Field label="Additional Notes" value={brief.additional_notes} /></div>
+            )}
           </div>
         </div>
 

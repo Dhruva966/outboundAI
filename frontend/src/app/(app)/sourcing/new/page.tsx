@@ -11,10 +11,17 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
 
 type Brief = {
   product: string
+  quantity: number | null
   target_price: number | null
   ceiling_price: number | null
-  supplier: string
+  supplier: string | null
+  contact_name: string | null
   region: string
+  relationship: string | null
+  previous_order: string | null
+  timeline: string | null
+  concessions: string | null
+  additional_notes: string | null
 }
 
 function BriefField({ label, value }: { label: string; value: string | number | null }) {
@@ -178,10 +185,23 @@ export default function NewBriefPage() {
             <div className="col-span-2">
               <BriefField label="Product" value={brief.product} />
             </div>
-            <BriefField label="Target Price" value={brief.target_price != null ? `$${brief.target_price}/unit` : null} />
-            <BriefField label="Max Budget" value={brief.ceiling_price != null ? `$${brief.ceiling_price}/unit` : null} />
-            <BriefField label="Supplier" value={brief.supplier} />
+            <BriefField label="Quantity" value={brief.quantity != null ? `${brief.quantity} units` : null} />
             <BriefField label="Region" value={brief.region} />
+            <BriefField label="Target Price" value={brief.target_price != null ? `$${brief.target_price}/unit` : null} />
+            <BriefField label="Max Budget (hidden)" value={brief.ceiling_price != null ? `$${brief.ceiling_price}/unit` : null} />
+            <BriefField label="Supplier" value={brief.supplier} />
+            <BriefField label="Contact" value={brief.contact_name} />
+            <BriefField label="Relationship" value={brief.relationship} />
+            <BriefField label="Timeline" value={brief.timeline} />
+            <div className="col-span-2">
+              <BriefField label="Previous Order" value={brief.previous_order} />
+            </div>
+            <div className="col-span-2">
+              <BriefField label="Concessions Available" value={brief.concessions} />
+            </div>
+            <div className="col-span-2">
+              <BriefField label="Additional Notes" value={brief.additional_notes} />
+            </div>
           </div>
           <button
             onClick={handleSave}

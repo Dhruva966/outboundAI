@@ -367,16 +367,23 @@ app.post('/api/parse-brief', requireAuth, async (req, res) => {
     let fullText = '';
     const stream = await anthropic.messages.stream({
       model: 'claude-sonnet-4-6',
-      max_tokens: 600,
-      system: `Extract a sourcing negotiation brief from the user's text. Return ONLY valid JSON with these exact fields:
+      max_tokens: 800,
+      system: `Extract a sourcing negotiation brief from the user's free-text description. Return ONLY valid JSON with these exact fields:
 {
-  "product": "<product description including quantity and specs>",
-  "target_price": <number — target price per unit>,
-  "ceiling_price": <number — max budget / walk-away price per unit>,
-  "supplier": "<supplier name and contact person if mentioned>",
-  "region": "<india|china|vietnam|other>"
+  "product": "<product description — material, style, spec — no quantity>",
+  "quantity": <integer — units to order, or null>,
+  "target_price": <number — target price per unit, or null>,
+  "ceiling_price": <number — max budget / walk-away price per unit, or null>,
+  "supplier": "<supplier company name, or null>",
+  "contact_name": "<person to speak to at the supplier, or null>",
+  "region": "<india|china|vietnam|bangladesh|other>",
+  "relationship": "<new|existing|long_term — infer from context, default new>",
+  "previous_order": "<description of any prior order: quantity, price, date — or null>",
+  "timeline": "<delivery or production deadline if mentioned, or null>",
+  "concessions": "<anything the buyer can offer: volume commitment, fast payment, exclusivity — or null>",
+  "additional_notes": "<any other context relevant to the negotiation — strategy hints, competitor mentions, quality requirements — or null>"
 }
-If a field is not mentioned, use null for numbers or "unknown" for strings. Do not explain. JSON only.`,
+Rules: use null for any field not mentioned. Do not invent values. Infer region from supplier location if mentioned. Do not explain. Return JSON only.`,
       messages: [{ role: 'user', content: text }],
     });
 

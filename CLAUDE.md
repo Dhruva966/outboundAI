@@ -1,33 +1,29 @@
 
-## Documentation — fetch these before building anything
+## Documentation — fetch before writing any API code
 
-Before writing any code or making architecture decisions for this project,
-fetch and read the relevant documentation. Do not rely solely on training
-knowledge — these APIs evolve and the docs are the source of truth.
+**HARD RULE: For any external API, SDK, or library — fetch the official documentation before writing parameters, event names, model names, method signatures, or config values. Training knowledge is stale. "I believe this is correct" is not acceptable. Verify it.**
+
+This applies to every technology in this project and any new one introduced. When in doubt about whether something needs a doc check — fetch it. The cost of a WebFetch is zero. The cost of a wrong audio format or invalid API field is a silent broken call.
+
+**How to fetch:**
+- Use WebFetch with the official docs URL
+- If the docs page returns 403, fall back to the GitHub SDK source (TypeScript types are authoritative and always public)
+- Search for `<library> github typescript types` or `<library> openapi spec` if official docs are blocked
+
+**Known doc sources for this project (not exhaustive — search for others as needed):**
 
 | What | URL | When to fetch |
 |------|-----|---------------|
-| Deepgram home | https://developers.deepgram.com/home | Any Deepgram change |
-| Deepgram Voice Agent API | https://developers.deepgram.com/docs/voice-agent | Changing agent config, audio format, event types |
-| Deepgram STT streaming | https://developers.deepgram.com/docs/getting-started-with-live-streaming-audio | STT model params, endpointing |
-| Twilio Programmable Voice | https://www.twilio.com/docs/voice | Webhook format, TwiML verbs, call lifecycle |
-| Twilio Media Streams | https://www.twilio.com/docs/voice/media-streams | WS protocol, audio format (mulaw 8kHz), frame size (160 bytes/20ms) |
-| Exa Search API | [docs/exa-search-api.md](docs/exa-search-api.md) | Any Exa search call — params, types, snake_case vs camelCase, common mistakes |
-
-**Rule:** If a task touches Deepgram, Twilio, or Gemini — fetch the relevant doc page
-first with WebFetch. Configs, event names, and audio format parameters change frequently.
-A wrong format (e.g. wrong mulaw sample rate) silently breaks audio with no error.
-Always verify against live docs.
+| Deepgram Voice Agent API | https://developers.deepgram.com/docs/voice-agent | Agent config, audio format, event types |
+| Twilio Media Streams | https://www.twilio.com/docs/voice/media-streams | WS protocol, audio format, frame size |
+| OpenAI Realtime SDK types | https://github.com/openai/openai-node/blob/master/src/resources/beta/realtime/sessions.ts | turn_detection schema, model names, all field valid values |
+| Exa Search API | [docs/exa-search-api.md](docs/exa-search-api.md) | Any Exa search call |
 
 **Critical audio pipeline rules (never rely on memory):**
-- Twilio Media Streams sends/receives **mulaw 8kHz, 160 bytes/frame (20ms)**
+- Twilio Media Streams: **mulaw 8kHz, 160 bytes/frame (20ms)**
+- OpenAI Realtime: `g711_ulaw` input/output — zero transcoding from Twilio
 - Deepgram Voice Agent input: **linear16 48kHz** — server must transcode
 - Deepgram Voice Agent output: **linear16 24kHz** — server must transcode back to mulaw 8kHz
-
-**Rule:** If a task touches Exa search — read `docs/exa-search-api.md` first.
-The JS SDK (`exa-js`) passes `text` and `highlights` top-level to `searchAndContents()`.
-Python uses snake_case; JS uses camelCase. Several deprecated params (`useAutoprompt`,
-`livecrawl`, `numSentences`) silently break calls — verify against the local doc file.
 
 ---
 
@@ -42,9 +38,11 @@ Python uses snake_case; JS uses camelCase. Several deprecated params (`useAutopr
 - One reads current file state. One fetches live API docs. One checks existing patterns.
 - Never read files sequentially when parallel reads are possible.
 
-**FETCH LIVE DOCS** before any Deepgram or Twilio API call:
-- Use WebFetch. Training knowledge on these APIs is stale.
+**FETCH LIVE DOCS** before writing any external API call, config, or parameter:
+- Applies to every library and service — not just Deepgram and Twilio.
+- If unsure about ANY field name, valid value, model name, or method signature — fetch the doc first.
 - Wrong audio format = silent failure. No exception, no error log, just broken audio.
+- If WebFetch returns 403, use the GitHub SDK source as fallback (TypeScript types = authoritative schema).
 
 **SPAWN PLAN AGENT** before writing more than 50 lines of new code:
 - New file, new feature, new audio pipeline → Plan agent first.
